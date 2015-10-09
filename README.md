@@ -3,15 +3,36 @@ A [pytest][pytest] plugin for JIRA integration.
 
 This plugin links tests with JIRA tickets. The plugin behaves similar to the [pytest-bugzilla](https://pypi.python.org/pypi/pytest-bugzilla) plugin.
 
-* If the test fails ...
+| variable | description |
+|----:|:----|
+|v|used version|
+|Va|affected versions|
+|Vf|fixed in versions|
+|C|used components|
+|Ca|affected components|
 
-  * and the JIRA ticket is still **unresolved** (i.e. not fixed), the test result is **xfail** (e.g. known failure).
-  * and the JIRA ticket is **resolved** (i.e. fixed), the test result is **fail** (e.g. unexpected failure).
 
-* If the test passed ...
+| CONDITION | Test Passed | Test Failed |
+|---------|:---------:|:---------:|
+| | **Basic** | |
+| Run = False | skipped | skipped
+| Unresolved | xpassed | xfailed |
+| Resolved | passed | failed |
+| Not found  | passed | failed |
+| Not specified | passed | failed |
+| | **Advanced** | |
+| *Resolved:* | 
+| v ∉ Va | passed | failed |
+| v ∈ Va ∧ v ∈ Vf | passed | failed |
+| v ∈ Va ∧ v ∉ Vf | xpassed | xfailed |
+| *Unresolved:*| 
+| C ∩ Ca ∧ v = not specified | xpassed | xfailed |
+| C ∩ Ca ∧ Va = not specified | xpassed | xfailed |
+| C ∩ Ca ∧ v ∈ Va | xpassed | xfailed |
+| C ∩ Ca ∧ v ∉ Va | passed | failed |
+| ¬(C ∩ Ca) | passed | failed |
 
-  * and the JIRA ticket is still **unresolved** (i.e. not fixed), the test result is **xpassed** (e.g. unexpected pass).
-  * and the JIRA ticket is **resolved**, the test result is **passed** (e.g. everything works).
+
 
 The plugin does not close JIRA tickets, or create them. It just allows you to link tests to existing tickets.
 
