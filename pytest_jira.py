@@ -61,7 +61,8 @@ class JiraHooks(object):
         if 'jira' in item.keywords:
             marker = item.keywords['jira']
             if len(marker.args) == 0:
-                raise TypeError('JIRA marker requires one, or more, arguments')
+                logger.warning('JIRA marker requires one, or more, arguments')
+                return []
             jira_ids = item.keywords['jira'].args
 
         # Was a jira issue referenced in the docstr?
@@ -310,5 +311,5 @@ def pytest_configure(config):
         )
         if jira_plugin.is_connected():
             # if connection to jira fails, plugin won't be loaded
-            ok = config.pluginmanager.register(jira_plugin)
+            ok = config.pluginmanager.register(jira_plugin, name='jira_plugin')
             assert ok
