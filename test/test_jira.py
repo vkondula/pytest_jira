@@ -5,6 +5,7 @@ import xmlrpclib
 RESOLVED_ISSUE = 'ORG-1412'
 UNRESOLVED_ISSUE = 'ORG-1382'
 
+
 @pytest.mark.skip_selenium
 @pytest.mark.nondestructive
 class Test_Pytest_JIRA_Marker(object):
