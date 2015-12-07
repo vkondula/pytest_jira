@@ -4,8 +4,8 @@ import glob
 import shutil
 from setuptools import setup,Command
 from setuptools.command.test import test as TestCommand
-
-default_args = '-v --jira --tb=native'
+ 
+default_args = ' -s -v --jira --tb=native'
 
 class PyTest(TestCommand):
     def finalize_options(self):

@@ -2,83 +2,145 @@ import pytest
 import os
 import xmlrpclib
 
-RESOLVED_ISSUE = 'ORG-1412'
-UNRESOLVED_ISSUE = 'ORG-1382'
-
+failed = pytest.mark.expect_fail
+passed = pytest.mark.expect_pass
+xfailed = pytest.mark.expect_xfail
+xpassed = pytest.mark.expect_xpass
+skiped = pytest.mark.expect_skip
 
 @pytest.mark.skip_selenium
 @pytest.mark.nondestructive
-class Test_Pytest_JIRA_Marker(object):
+class Test_Pytest_JIRA(object):
 
-    @pytest.mark.xfail(reason='Expected xfail due to bad marker')
+    @passed
+    def test_no_jira_marker_passed(self):
+        assert True
+
+    @failed
+    def test_no_jira_marker_failed(self):
+        assert False
+
     @pytest.mark.jira
-    def test_jira_marker_no_args(self):
+    @passed
+    def test_jira_marker_no_args_passed(self):
         assert True
 
-    @pytest.mark.xfail(reason='Expected xfail due to bad marker')
+    @pytest.mark.jira
+    @failed
+    def test_jira_marker_no_args_failed(self):
+        assert False
+
     @pytest.mark.jira('there is no issue here')
-    def test_jira_marker_bad_args(self):
+    @passed
+    def test_jira_marker_bad_args_passed(self):
         assert True
 
-    @pytest.mark.xfail(reason='Expected xfail due to bad marker')
-    @pytest.mark.jira(None)
-    def test_jira_marker_bad_args2(self):
-        assert True
-
-    @pytest.mark.jira(UNRESOLVED_ISSUE, run=False)
-    def test_jira_marker_no_run(self):
-        '''Expected skip due to run=False'''
+    @pytest.mark.jira('there is no issue here')
+    @failed
+    def test_jira_marker_bad_args_failed(self):
         assert False
 
-    @pytest.mark.jira(UNRESOLVED_ISSUE, run=True)
-    def test_open_jira_marker_pass(self):
-        '''Expected skip due to unresolved JIRA'''
+    @pytest.mark.jira('ISSUE-2')
+    @passed
+    def test_closed_no_comp_no_version_passed(self):
         assert True
 
-    def test_open_jira_docstr_pass(self):
-        '''Expected skip due to unresolved JIRA Issue %s'''
-        assert True
-    test_open_jira_docstr_pass.__doc__ %= UNRESOLVED_ISSUE
-
-    @pytest.mark.jira(UNRESOLVED_ISSUE, run=True)
-    def test_open_jira_marker_fail(self):
-        '''Expected skip due to unresolved JIRA'''
+    @pytest.mark.jira('ISSUE-2')
+    @failed
+    def test_closed_no_comp_no_version_failed(self):
         assert False
 
-    def test_open_jira_docstr_fail(self):
-        '''Expected skip due to unresolved JIRA Issue %s'''
-        assert False
-    test_open_jira_docstr_fail.__doc__ %= UNRESOLVED_ISSUE
-
-    @pytest.mark.jira(RESOLVED_ISSUE, run=True)
-    def test_closed_jira_marker_pass(self):
-        '''Expected PASS due to resolved JIRA Issue'''
+    @pytest.mark.jira('ISSUE-1')
+    @xpassed
+    def test_open_no_comp_no_version_xpassed(self):
         assert True
 
-    def test_closed_jira_docstr_pass(self):
-        '''Expected PASS due to resolved JIRA Issue %s'''
-        assert True
-    test_closed_jira_docstr_pass.__doc__ %= RESOLVED_ISSUE
-
-    @pytest.mark.xfail(reason='Expected xfail due to resolved JIRA issue')
-    @pytest.mark.jira(RESOLVED_ISSUE, run=True)
-    def test_closed_jira_marker_fail(self):
+    @pytest.mark.jira('ISSUE-1')
+    @xfailed
+    def test_open_no_comp_no_version_xfailed(self):
         assert False
 
-    @pytest.mark.xfail(reason='Expected xfail due to resolved JIRA issue')
-    def test_closed_jira_docstr_fail(self):
-        '''Expected xfail due to resolved JIRA Issue %s'''
-        assert False
-    test_closed_jira_docstr_fail.__doc__ %= RESOLVED_ISSUE
-
-    def test_pass_without_jira(self):
+    @pytest.mark.jira('ISSUE-3')
+    @xpassed # xpassed
+    def test_open_match_comp_no_version_xpassed(self):
         assert True
 
-    @pytest.mark.xfail(reason='Expected xfail due to normal test failure')
-    def test_fail_without_jira_marker(self):
+    @pytest.mark.jira('ISSUE-3')
+    @xfailed
+    def test_open_match_comp_no_version_xfailed(self):
         assert False
 
-    @pytest.mark.xfail(reason='Expected xfail due to normal test failure')
-    def test_fail_without_jira_docstr(self):
-        '''docstring with no jira issue'''
+    @pytest.mark.jira('ISSUE-3F')
+    @passed
+    def test_open_no_match_comp_no_version_passed(self):
+        assert True
+
+    @pytest.mark.jira('ISSUE-3F')
+    @failed
+    def test_open_no_match_comp_no_version_failed(self):
+        assert False
+
+    @pytest.mark.jira('ISSUE-4')
+    @passed
+    def test_closed_match_comp_no_version_passed(self):
+        assert True
+
+    @pytest.mark.jira('ISSUE-4')
+    @failed
+    def test_closed_match_comp_no_version_failed(self):
+        assert False
+
+    @pytest.mark.jira('ISSUE-5')
+    @xpassed
+    def test_open_no_comp_match_version_xpassed(self):
+        assert True
+
+    @pytest.mark.jira('ISSUE-5')
+    @xfailed
+    def test_open_no_comp_match_version_xfailed(self):
+        assert False
+
+    @pytest.mark.jira('ISSUE-6')
+    @passed
+    def test_closed_no_comp_match_version_passed(self):
+        assert True
+
+    @pytest.mark.jira('ISSUE-6')
+    @xfailed #failed
+    def test_closed_no_comp_match_version_failed(self):
+        assert False
+
+    @pytest.mark.jira('ISSUE-6F')
+    @xpassed 
+    def test_closed_for_diff_version_xpassed(self):
+        assert True
+
+    @pytest.mark.jira('ISSUE-6F')
+    @xfailed
+    def test_closed_for_diff_version_xfailed(self):
+        assert False
+
+    @pytest.mark.jira('ISSUE-7')
+    @xpassed
+    def test_open_match_comp_match_version_xpassed(self):
+        assert True
+
+    @pytest.mark.jira('ISSUE-7')
+    @xfailed
+    def test_open_match_comp_match_version_xfailed(self):
+        assert False
+
+    @pytest.mark.jira('ISSUE-7F')
+    @passed
+    def test_open_for_diff_version_passed(self):
+        assert True
+
+    @pytest.mark.jira('ISSUE-7F')
+    @failed
+    def test_open_for_diff_version_failed(self):
+        assert False
+
+    @pytest.mark.jira('ISSUE-7F', run=False)
+    @skiped
+    def test_run_false_skipped(self):
         assert False

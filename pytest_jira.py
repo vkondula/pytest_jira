@@ -29,8 +29,6 @@ class JiraHooks(object):
             version=None
             ):
         self.url = url
-        self.username = username
-        self.password = password
         self.verify = verify
         self.components = components
         self.version = version
@@ -39,22 +37,22 @@ class JiraHooks(object):
         self.issue_cache = dict()
 
         # Setup basic_auth
-        if self.username and self.password:
-            basic_auth=(self.username, self.password)
+        if username and password:
+            self.basic_auth=(username, password)
         else:
-            basic_auth=None
+            self.basic_auth=None
 
         # TODO - use requests REST API instead to drop a dependency
         # (https://confluence.atlassian.com/display/DOCSPRINT/The+Simplest+Possible+JIRA+REST+Examples)
         try:
             self.jira = JIRA(options=dict(server=self.url, verify=self.verify),
-                         basic_auth=basic_auth, validate=True, max_retries=1)
+                         basic_auth=self.basic_auth, validate=True, max_retries=1)
         except Exception as ex:
             logger.error('Unable to connect to Jira: %s' % ex)
             self.jira = None
 
     def is_connected(self):
-        return self.jira is not None
+        return self.jira is not None or self.basic_auth is None
            
     def get_jira_issues(self, item):
         jira_ids = []
@@ -62,7 +60,8 @@ class JiraHooks(object):
         if 'jira' in item.keywords:
             marker = item.keywords['jira']
             if len(marker.args) == 0:
-                raise TypeError('JIRA marker requires one, or more, arguments')
+                logger.warning('JIRA marker requires one, or more, arguments')
+                return []
             jira_ids = item.keywords['jira'].args
 
         # Was a jira issue referenced in the docstr?
@@ -80,7 +79,7 @@ class JiraHooks(object):
         # Access Jira issue (may be cached)
         if issue_id not in self.issue_cache:
             try:
-                self.issue_cache[issue_id] = self.jira.issue(issue_id).fields
+                self.issue_cache[issue_id] = store_issue(self.jira.issue(issue_id).fields)
             except jira.JIRAError:
                 logger.warning('Issue ID not found: %s' % issue_id)
             except Exception as ex:
@@ -88,7 +87,7 @@ class JiraHooks(object):
         if issue_id not in self.issue_cache:
             return True
         # Skip test if issue remains unresolved
-        return self.issue_cache[issue_id].status.name.lower() in ['closed', 'resolved']
+        return self.issue_cache[issue_id]['status'] in ['closed', 'resolved']
 
     def is_component_affected(self, issue_id):
         '''
@@ -100,7 +99,7 @@ class JiraHooks(object):
             return False
         if not self.components:
             return True
-        components = [c.name for c in self.issue_cache[issue_id].components]
+        components = self.issue_cache[issue_id]['components']
         if not components:
             # assumption: all components are affected
             return True
@@ -120,7 +119,7 @@ class JiraHooks(object):
             return True
         if issue_id not in self.issue_cache:
             return True
-        versions = [v.name for v in self.issue_cache[issue_id].versions]
+        versions = self.issue_cache[issue_id]['versions']
         if not versions:
             # assumption: all versions are affected
             return True
@@ -135,8 +134,8 @@ class JiraHooks(object):
         '''
         if issue_id not in self.issue_cache:
             return True
-        versions = [v.name for v in self.issue_cache[issue_id].versions]
-        fixed = [v.name for v in self.issue_cache[issue_id].fixVersions]
+        versions = self.issue_cache[issue_id]['versions']
+        fixed = self.issue_cache[issue_id]['fixVersions']
         if not fixed:
             # assumption: fixed for all versions
             return True
@@ -201,6 +200,18 @@ class JiraHooks(object):
         for issue_id in jira_ids:
             if not jira_run and not self.is_issue_resolved(issue_id):
                 pytest.skip("%s/browse/%s" % (self.url, issue_id))
+
+def store_issue(fields):
+    cache = dict()
+    components = [c.name for c in fields.components]
+    versions = [v.name for v in fields.versions]
+    fixVersions = [v.name for v in fields.fixVersions]
+    cache['components'] = components
+    cache['versions'] = versions
+    cache['fixVersions'] = fixVersions
+    cache['status'] = fields.status.name.lower()
+    return cache
+
 
 def pytest_addoption(parser):
     """
@@ -298,8 +309,8 @@ def pytest_configure(config):
             verify,
             config.getini('jira_components'),
             config.getini('jira_version')
-            )
+        )
         if jira_plugin.is_connected():
             # if connection to jira fails, plugin won't be loaded
-            ok = config.pluginmanager.register(jira_plugin)
+            ok = config.pluginmanager.register(jira_plugin, name='jira_plugin')
             assert ok

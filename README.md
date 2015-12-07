@@ -17,7 +17,7 @@ This plugin links tests with JIRA tickets. The plugin behaves similar to the [py
 | *Resolved:* |
 | Your version was not affected | passed | failed |
 | Your version was affected and fixed | passed | failed |
-| Your version was affected but fixed | xpassed | xfailed |
+| Your version was affected but not fixed | xpassed | xfailed |
 | *Unresolved:*|
 | Your components are affected | xpassed | xfailed |
 | Your components are affected in your version | xpassed | xfailed |
